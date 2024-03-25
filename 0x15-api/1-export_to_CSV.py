@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-""" Rest API script that gathers data from an API. """
+""" Rest API script that gathers data from an API and saves it to a CSV. """
+import csv
 import json
 import sys
 import urllib
@@ -29,14 +30,14 @@ if emp_id.isdigit():
         employee = json.loads(emp_data)
         todos = json.loads(todos_data)
 
-        name = employee.get("name")
-        done = len([todo for todo in todos if todo.get("completed")])
-        total = len(todos)
+        username = employee.get("username")
 
-        print(f"Employee {name} is done with tasks({done}/{total}):")
-        for todo in todos:
-            if todo.get("completed"):
-                print(f"\t {todo.get('title')}")
+        with open(f"{emp_id}.csv", "w", newline="") as csvfile:
+            writer = csv.writer(csvfile, quoting=csv.QUOTE_ALL)
+            for todo in todos:
+                todo_status = todo.get("completed")
+                todo_title = todo.get("title")
+                writer.writerow([emp_id, username, todo_status, todo_title])
 
     except urllib.error.URLError as err:
         print(f"An error occurred: {err}")
