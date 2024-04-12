@@ -1,49 +1,28 @@
 #!/usr/bin/python3
-""" Queries the Reddit API and returns the number of subscribers """
-import requests
+"""Module for task 2"""
 
 
-def recurse(subreddit, hot_list=[], after=None, max_pages=None):
-    """
-    Recursively queries the Reddit API and returns a list containing the titles
-    of all hot articles for a given subreddit.
+def recurse(subreddit, hot_list=[], count=0, after=None):
+    """Queries the Reddit API and returns all hot posts
+    of the subreddit"""
+    import requests
 
-    Args:
-        subreddit (str): subreddit to query
-        hot_list (list): list of hot articles
-        after (str): identifier for the next page
-        max_pages (int): maximum number of pages to fetch
+    sub_info = requests.get("https://www.reddit.com/r/{}/hot.json"
+                            .format(subreddit),
+                            params={"count": count, "after": after},
+                            headers={"User-Agent": "My-User-Agent"},
+                            allow_redirects=False)
+    if sub_info.status_code >= 400:
+        return None
 
-    Returns:
-        list: list of hot articles
-    """
-    if max_pages is not None and max_pages <= 0:
-        return hot_list  # Base case: Stop when max_pages is reached or None
+    hot_l = hot_list + [child.get("data").get("title")
+                        for child in sub_info.json()
+                        .get("data")
+                        .get("children")]
 
-    base_url = 'https://www.reddit.com/r/{}/hot.json'.format(subreddit)
-    params = {'after': after} if after else {}
+    info = sub_info.json()
+    if not info.get("data").get("after"):
+        return hot_l
 
-    request = requests.get(
-        base_url,
-        params=params,
-        headers={'User-Agent': 'Agent Uche'},
-        allow_redirects=False
-    )
-
-    if request.status_code != 200:
-        return None  # Base case: Stop if the request fails
-
-    data = request.json()
-    posts = data.get('data', {}).get('children', [])
-
-    for post in posts:
-        hot_list.append(post['data']['title'])
-
-    next_page = data.get('data', {}).get('after')
-    if next_page:
-        # Recursively call to fetch the next page
-        return recurse(
-            subreddit, hot_list, after=next_page, max_pages=max_pages
-        )
-
-    return hot_list if len(hot_list) > 0 else None
+    return recurse(subreddit, hot_l, info.get("data").get("count"),
+                   info.get("data").get("after"))
